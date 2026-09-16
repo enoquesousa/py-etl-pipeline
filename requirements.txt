@@ -5,7 +5,7 @@ psycopg2-binary>=2.9.12
 pandas>=3.0.5
 tenacity>=9.1.4
 schedule>=1.2.2
-alembic>=1.19.1
+alembic>=1.20.0
 
 # Tests, lint, CI, optional GraphQL HTTP server
 pytest>=9.1.1
