@@ -13,4 +13,4 @@ pytest-cov>=7.1.0
 ruff>=0.16.3
 strawberry-graphql>=0.324.0
 starlette>=1.6.0
-uvicorn[standard]>=0.52.4
+uvicorn[standard]>=0.53.0
