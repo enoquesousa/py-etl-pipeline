@@ -2,7 +2,7 @@
 python-dotenv>=1.2.3
 SQLAlchemy>=2.0.52
 psycopg2-binary>=2.9.12
-pandas>=3.0.5
+pandas>=3.0.6
 tenacity>=9.1.4
 schedule>=1.2.2
 alembic>=1.19.1
