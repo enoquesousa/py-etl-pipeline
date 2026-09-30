@@ -10,7 +10,7 @@ alembic>=1.19.1
 # Tests, lint, CI, optional GraphQL HTTP server
 pytest>=9.1.1
 pytest-cov>=7.1.0
-ruff>=0.16.3
+ruff>=0.16.9
 strawberry-graphql>=0.324.0
 starlette>=1.6.0
 uvicorn[standard]>=0.52.4
