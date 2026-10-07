@@ -1,5 +1,5 @@
 # Runtime (ETL + migrations)
-python-dotenv>=1.2.3
+python-dotenv>=1.2.4
 SQLAlchemy>=2.0.52
 psycopg2-binary>=2.9.12
 pandas>=3.0.5
