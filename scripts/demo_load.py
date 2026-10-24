@@ -23,6 +23,7 @@ SRC_PATH = os.path.join(ROOT, "src")
 if SRC_PATH not in sys.path:
     sys.path.insert(0, SRC_PATH)
 
+from py_etl_pipeline.config import load_environment
 from py_etl_pipeline.database import get_session, init_db
 from py_etl_pipeline.load import load, log_pipeline_event
 from py_etl_pipeline.models import LogEntry, Sale
@@ -175,6 +176,7 @@ def demo_log_analysis(session) -> None:
 
 
 def main() -> None:
+    load_environment(os.path.join(ROOT, ".env"))
     init_db()
     session = get_session()
 

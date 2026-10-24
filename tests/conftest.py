@@ -10,7 +10,7 @@ from collections.abc import Iterator
 import pytest
 from sqlalchemy import create_engine
 from sqlalchemy.engine import Engine
-from sqlalchemy.exc import DBAPIError, OperationalError
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session, sessionmaker
 
 # Ensure the src/ directory is on sys.path so `py_etl_pipeline` imports work
@@ -76,23 +76,23 @@ def pg_engine() -> Iterator[Engine]:
 
     try:
         url = database_url()
-    except ValueError as exc:
-        pytest.skip(f"PostgreSQL not configured: {exc}")
+    except ValueError:
+        pytest.skip("PostgreSQL configuration is missing or invalid.")
 
     if not url.startswith(("postgresql://", "postgresql+")):
-        pytest.skip(f"DATABASE_URL is not a PostgreSQL URL ({url!r})")
+        pytest.skip("DATABASE_URL is not a PostgreSQL URL.")
 
-    engine = create_engine(url, future=True, pool_pre_ping=True)
-
+    engine = None
     try:
+        engine = create_engine(url, future=True, pool_pre_ping=True)
         with engine.connect():
             pass
         Base.metadata.create_all(engine)
-    except (OperationalError, DBAPIError) as exc:
-        engine.dispose()
+    except (SQLAlchemyError, ValueError):
+        if engine is not None:
+            engine.dispose()
         warnings.warn(
-            f"Skipping @pytest.mark.pg tests: cannot reach PostgreSQL at {url!r}: "
-            f"{exc.__class__.__name__}: {exc}",
+            "Skipping @pytest.mark.pg tests: the PostgreSQL connection or schema setup failed.",
             stacklevel=1,
         )
         pytest.skip("PostgreSQL not reachable; see warning above")
