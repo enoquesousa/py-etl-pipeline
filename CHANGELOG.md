@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Security
+
+- Require an explicit Compose database password and publish PostgreSQL on loopback.
+- Escape separate connection fields, preserve complete DSN options, and remove credential-bearing diagnostic output and fallback hosts.
+- Load dotenv files explicitly at entry-point startup instead of library import.
+- Restrict the optional GraphQL probe to local clients by default, with an explicit public-metadata mode and bounded HTTP inputs.
+- Raise the SQLAlchemy and Strawberry dependency floors and validate dependencies and packaging in CI.
+
 ## [0.1.0] - 2026-05-09
 
 ### Added
