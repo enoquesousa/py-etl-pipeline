@@ -1,16 +1,16 @@
 # Runtime (ETL + migrations)
-python-dotenv>=1.2.3
-SQLAlchemy>=2.0.52
-psycopg2-binary>=2.9.12
-pandas>=3.0.5
-tenacity>=9.1.4
+python-dotenv>=1.2.4
+SQLAlchemy>=2.1.4
+psycopg2-binary>=2.9.13
+pandas>=3.0.6
+tenacity>=9.2.1
 schedule>=1.2.2
-alembic>=1.19.1
+alembic>=1.20.0
 
 # Tests, lint, CI, optional GraphQL HTTP server
 pytest>=9.1.1
 pytest-cov>=7.1.0
-ruff>=0.16.3
-strawberry-graphql>=0.327.2
-starlette>=1.6.0
-uvicorn[standard]>=0.52.4
+ruff>=0.17.0
+strawberry-graphql>=0.333.0
+starlette>=1.7.0
+uvicorn[standard]>=0.54.0

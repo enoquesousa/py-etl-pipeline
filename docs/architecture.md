@@ -76,3 +76,66 @@ logs
 ## Migrations
 
 Schema is managed by **Alembic** with autogenerate. See [development.md](development.md#migrations).
+
+## Authentication and credential boundaries
+
+The worker is a local CLI/scheduler. Its caller supplies filesystem access and
+database credentials; there is no application login, session store, JWT, refresh
+token, or HTTP endpoint that starts an ETL run.
+
+| Component | Credential responsibility |
+| --- | --- |
+| `main.py`, utility scripts, Alembic startup | Explicitly load the checkout-root `.env`, preserving exported variables |
+| `config.load_environment(path)` | Load only the caller-selected dotenv path; imports and getters do not search for files |
+| `config.database_url()` | Preserve a full URL, or validate and escape separate PostgreSQL fields with SQLAlchemy 2.1+ |
+| `database.engine()` / SQLAlchemy driver | Use the connection string to authenticate to the configured database and apply its transport options |
+| `scripts/diagnose_db.py` | Probe that same PostgreSQL destination without echoing credentials or trying a second host |
+| Optional GraphQL ASGI app | Serve only health/version and normalized operational hints; no database credentials or ETL access |
+
+At worker startup, configuration produces a connection string for SQLAlchemy.
+The engine authenticates through the PostgreSQL driver when it opens a
+connection. The worker then reads CSV input, transforms it, and writes sales and
+audit records through that connection. A complete URL takes precedence and may
+carry TLS, socket, or external authentication options. Separate fields require
+an explicit password and are escaped without interpreting password characters
+as URL structure. The string necessarily contains the driver's credential
+material and must not be logged or serialized.
+
+Compose keeps the database port on host loopback and passes separate fields to
+the worker over its configuration. Its bridge network is a trusted local
+deployment boundary; it does not provide a new authentication scheme. Password
+rotation must update the database account and running clients together. The
+environment used to initialize a Postgres volume does not change an account
+already stored in that volume.
+
+## GraphQL request flow
+
+```mermaid
+flowchart TD
+    Client["HTTP client"] --> Envelope["Path, method, and size limits"]
+    Envelope --> Mode{"Public metadata enabled?"}
+    Mode -->|"yes"| Schema["Read-only GraphQL schema"]
+    Mode -->|"no"| Local["Peer, Host, Origin, and fetch checks"]
+    Local -->|"allowed"| Schema
+    Local -->|"denied"| Error["Fixed rejection response"]
+    Envelope -->|"invalid"| Error
+    Schema --> Metadata["Health, version, and runtime hints"]
+```
+
+Only GET/POST at `/graphql` are supported; GraphiQL and WebSockets are disabled.
+The body and query string each have a 64 KiB cap before Strawberry parses them.
+These limits do not bound total concurrent work or every possible query cost.
+
+`ETL_GRAPHQL_PUBLIC` absent or `0` selects local access. The actual peer must be
+loopback, Host must identify loopback/localhost, and Origin/fetch metadata must
+be compatible with local access. Forwarded and X-Forwarded headers are rejected
+in this mode. Run Uvicorn on loopback with `--no-proxy-headers`; do not publish
+the local mode through a proxy that would itself appear to be a local peer.
+
+`ETL_GRAPHQL_PUBLIC=1` deliberately allows metadata access from any peer. It
+does not authenticate callers, and forwarded headers are not used for access
+decisions. Other values are invalid. This mode is suitable only when those
+fields may be public or an independent gateway controls access. The schema
+contains no mutation, database resolver, credential field, or ETL execution.
+It does not load a dotenv file; server configuration must already be exported
+or explicitly loaded with Uvicorn `--env-file`.
