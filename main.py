@@ -12,6 +12,7 @@ SRC_PATH = os.path.join(ROOT, "src")
 if SRC_PATH not in sys.path:
     sys.path.insert(0, SRC_PATH)
 
+from py_etl_pipeline.config import load_environment
 from py_etl_pipeline.database import get_session, init_db
 from py_etl_pipeline.pipeline import run_pipeline
 from py_etl_pipeline.retry import retry_db
@@ -29,6 +30,8 @@ def main(load_mode: Literal["bulk", "upsert"] = "bulk") -> None:
         load_mode: Loading strategy ('bulk' for insert-only, 'upsert' for insert-or-update).
                   Controlled by environment variable LOAD_MODE (default: 'bulk').
     """
+    load_environment(os.path.join(ROOT, ".env"))
+
     # Allow environment variable override
     load_mode_env = os.getenv("LOAD_MODE", "").strip().lower()
     if load_mode_env in ("bulk", "upsert"):
