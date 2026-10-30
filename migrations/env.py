@@ -20,7 +20,7 @@ SRC_PATH = ROOT / "src"
 if str(SRC_PATH) not in sys.path:
     sys.path.insert(0, str(SRC_PATH))
 
-from py_etl_pipeline.config import database_url  # noqa: E402
+from py_etl_pipeline.config import database_url, load_environment  # noqa: E402
 from py_etl_pipeline.models import Base  # noqa: E402
 
 target_metadata = Base.metadata
@@ -31,6 +31,7 @@ def get_url() -> str:
     x_args = context.get_x_argument(as_dictionary=True)
     if "url" in x_args and x_args["url"]:
         return x_args["url"]
+    load_environment(ROOT / ".env")
     return database_url()
 
 
