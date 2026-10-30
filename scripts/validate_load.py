@@ -13,6 +13,7 @@ SRC_PATH = ROOT / "src"
 if str(SRC_PATH) not in sys.path:
     sys.path.insert(0, str(SRC_PATH))
 
+from py_etl_pipeline.config import load_environment  # noqa: E402
 from py_etl_pipeline.database import get_session, init_db  # noqa: E402
 from py_etl_pipeline.models import Sale  # noqa: E402
 from py_etl_pipeline.pipeline import run_pipeline  # noqa: E402
@@ -29,6 +30,7 @@ def _write_csv(path: Path, rows: list[dict[str, str]]) -> None:
 
 
 def main() -> int:
+    load_environment(ROOT / ".env")
     # Fallback to SQLite so anyone can validate quickly.
     # If you want PostgreSQL, set DATABASE_URL in your environment/.env.
     force_sqlite = os.getenv("VALIDATE_FORCE_SQLITE", "").lower() in (

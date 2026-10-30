@@ -51,7 +51,7 @@ $env:DATABASE_URL = "sqlite:///./demo_smoke.db"
 python scripts/demo_load.py
 ```
 
-To exercise the full **CLI entrypoint** against PostgreSQL, copy `.env.example` → `.env`, set `DATABASE_URL` (or the discrete `POSTGRES_*` variables used by Compose), ensure your CSV path via `SALES_CSV_PATH`, then run `python main.py` (see [docs/development.md](docs/development.md)).
+To exercise the full **CLI entrypoint** against PostgreSQL, copy `.env.example` → `.env`, set a password and the other `POSTGRES_*` fields (or supply a complete `DATABASE_URL`), ensure your CSV path via `SALES_CSV_PATH`, then run `python main.py` (see [docs/development.md](docs/development.md)). CLI entry points explicitly load the checkout-root `.env` without overriding exported variables. Importing the library does not search for or load dotenv files.
 
 ## Features
 
@@ -65,14 +65,14 @@ To exercise the full **CLI entrypoint** against PostgreSQL, copy `.env.example` 
 | Scheduling | Optional recurring runs using the **`schedule`** library (`RUN_SCHEDULED`). |
 | Migrations | **Alembic** with autogenerate wired to SQLAlchemy models. |
 | Docker | **`docker-compose.yml`** — Postgres 16 plus an ETL image with health-aware startup. |
-| GraphQL (optional) | **Strawberry** ASGI app: `health`, `version`, and safe ETL runtime hints. |
+| GraphQL (optional) | Local **Strawberry** HTTP probe at `/graphql`: `health`, `version`, and non-secret ETL runtime hints; explicit opt-in for public metadata access. |
 
 ## Tech stack
 
 | Component | Role |
 | --------- | ---- |
 | Python 3.11+ | Language and runtime |
-| SQLAlchemy 2 | ORM, sessions, schema bootstrap |
+| SQLAlchemy 2.1+ | ORM, sessions, schema bootstrap, and connection-field escaping |
 | psycopg2 | PostgreSQL driver |
 | pandas | CSV extraction |
 | tenacity | Retry/backoff for DB operations |
@@ -156,7 +156,7 @@ python main.py
 ### Optional GraphQL probe
 
 ```bash
-uvicorn py_etl_pipeline.graphql_server:app --host 0.0.0.0 --port 8000
+uvicorn py_etl_pipeline.graphql_server:app --host 127.0.0.1 --port 8000 --no-proxy-headers
 ```
 
 Example body against `http://localhost:8000/graphql`:
@@ -164,6 +164,24 @@ Example body against `http://localhost:8000/graphql`:
 ```json
 {"query": "query { health version }"}
 ```
+
+Only `/graphql` is served, using GET or POST. The probe does not query the
+database, return sales/log records, or run the ETL. By default it accepts only
+an actual loopback peer with a local Host and compatible Origin/fetch metadata.
+It rejects forwarding headers in local mode; keep `--no-proxy-headers` and do
+not publish the local mode through a proxy.
+
+To deliberately publish these metadata fields, set `ETL_GRAPHQL_PUBLIC=1` and
+choose the desired bind address. This mode is **unauthenticated public access**:
+it does not introduce users, API keys, sessions, or JWTs. Missing/`0` keeps local
+mode; any other value is rejected. GraphiQL and WebSockets are disabled. The body
+and query string each have a 64 KiB limit before GraphQL parsing. These limits
+are not a general query-cost or concurrency quota.
+
+The probe reads the process environment. Use exported variables, or explicitly
+pass Uvicorn `--env-file /path/to/file` when needed; the library does not load a
+dotenv file on import. See [SECURITY.md](SECURITY.md) for its separate trust
+boundary from the ETL worker and PostgreSQL.
 
 ## Resilience (automatic retries)
 
@@ -176,7 +194,7 @@ Database-facing entrypoints are wrapped with **`retry_db`** (Tenacity): transien
 | [LICENSE](LICENSE) | MIT License |
 | [CONTRIBUTING.md](CONTRIBUTING.md) | Contribution guidelines |
 | [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md) | Community standards |
-| [SECURITY.md](SECURITY.md) | Vulnerability reporting |
+| [SECURITY.md](SECURITY.md) | Vulnerability reporting, database credentials, and HTTP access model |
 | [CHANGELOG.md](CHANGELOG.md) | Version history |
 | [`codecov.yml`](codecov.yml) | Codecov defaults |
 | [`.pre-commit-config.yaml`](.pre-commit-config.yaml) | Local + CI-friendly Ruff hooks |
