@@ -6,9 +6,12 @@ import os
 from importlib.metadata import PackageNotFoundError, version
 
 import strawberry
+from starlette.applications import Starlette
+from starlette.routing import Route
 from strawberry.asgi import GraphQL
 
 from py_etl_pipeline.config import load_batch_size
+from py_etl_pipeline.graphql_http import GraphQLHTTPBoundary
 
 
 def _package_version() -> str:
@@ -51,4 +54,24 @@ class Query:
 
 
 schema = strawberry.Schema(query=Query)
-app = GraphQL(schema)
+
+
+def create_app() -> Starlette:
+    """Create a local metadata probe, or expose public metadata by explicit opt-in.
+
+    Configuration uses the process environment only. Export ETL_GRAPHQL_PUBLIC=1
+    before startup to permit remote clients; no credentials are accepted or required.
+    """
+    public = os.getenv("ETL_GRAPHQL_PUBLIC", "0")
+    if public not in {"0", "1"}:
+        raise ValueError("ETL_GRAPHQL_PUBLIC must be 0 or 1.")
+    graphql = GraphQL(
+        schema, graphql_ide=None, subscription_protocols=(), multipart_uploads_enabled=False
+    )
+    endpoint = GraphQLHTTPBoundary(graphql, public_metadata=public == "1")
+    application = Starlette(routes=[Route("/graphql", endpoint, methods=["GET", "POST"])])
+    application.router.redirect_slashes = False
+    return application
+
+
+app = create_app()
